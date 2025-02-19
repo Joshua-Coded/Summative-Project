@@ -2,9 +2,6 @@
 
 ## **Overview**
 The Spell Checker Tool is designed to assist users in identifying correctly spelled words and providing suggestions for misspelled ones. It uses a Binary Search Tree (BST) to store words from a dictionary file (`dictionary.txt`). The tool checks if a typed word exists in the dictionary and provides relevant suggestions for similar words based on similarity metrics.
-
-This project contributes **5 points** to the final grade and is evaluated based on the correct implementation of the BST, seamless word checking, and robust handling of edge cases.
-
 ---
 
 ## **Features**
