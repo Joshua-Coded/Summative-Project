@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 // Define the structure for a BST node
 typedef struct TreeNode {
@@ -16,7 +17,8 @@ typedef struct TreeNode {
 void initializeTree(TreeNode** root);
 void insertWord(TreeNode** root, const char* word);
 bool searchWord(const TreeNode* root, const char* word);
-void suggestWords(const TreeNode* root, const char* word);
+void suggestWords(const TreeNode* root, const char* word, int maxDistance);
 void freeTree(TreeNode* root);
+int levenshteinDistance(const char* str1, const char* str2);
 
 #endif

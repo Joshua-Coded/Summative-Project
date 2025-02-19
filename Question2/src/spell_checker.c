@@ -1,6 +1,9 @@
 #include "spell_checker.h"
 #include <ctype.h>
 
+// Define a macro for finding the minimum of three values
+#define MIN(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
+
 // Initialize an empty BST
 void initializeTree(TreeNode** root) {
     *root = NULL;
@@ -35,28 +38,48 @@ bool searchWord(const TreeNode* root, const char* word) {
     }
 }
 
-// Suggest similar words based on Levenshtein distance (simple implementation)
-void suggestWords(const TreeNode* root, const char* word) {
-    if (root == NULL) {
-        return;
+// Suggest similar words based on Levenshtein Distance
+void suggestWords(const TreeNode* root, const char* word, int maxDistance) {
+    if (root == NULL) return;
+
+    // Calculate edit distance
+    int distance = levenshteinDistance(word, root->word); // Use the declared function
+    if (distance <= maxDistance) {
+        printf("Did you mean: %s\n", root->word);
     }
 
-    // Simple similarity check: Check words with one character difference
-    if (strlen(root->word) == strlen(word)) {
-        int diff = 0;
-        for (size_t i = 0; i < strlen(word); i++) {
-            if (tolower(root->word[i]) != tolower(word[i])) {
-                diff++;
-                if (diff > 1) break;
-            }
-        }
-        if (diff == 1) {
-            printf("Did you mean: %s\n", root->word);
+    // Traverse left and right subtrees
+    suggestWords(root->left, word, maxDistance);
+    suggestWords(root->right, word, maxDistance);
+}
+
+// Function to calculate Levenshtein Distance
+int levenshteinDistance(const char* str1, const char* str2) {
+    size_t len1 = strlen(str1);
+    size_t len2 = strlen(str2);
+
+    if (len1 == 0) return len2;
+    if (len2 == 0) return len1;
+
+    int matrix[len1 + 1][len2 + 1];
+
+    // Initialize matrix
+    for (size_t i = 0; i <= len1; i++) matrix[i][0] = i;
+    for (size_t j = 0; j <= len2; j++) matrix[0][j] = j;
+
+    // Compute distances
+    for (size_t i = 1; i <= len1; i++) {
+        for (size_t j = 1; j <= len2; j++) {
+            int cost = (str1[i - 1] == str2[j - 1]) ? 0 : 1;
+            matrix[i][j] = MIN(
+                matrix[i - 1][j] + 1,      // Deletion
+                matrix[i][j - 1] + 1,      // Insertion
+                matrix[i - 1][j - 1] + cost // Substitution
+            );
         }
     }
 
-    suggestWords(root->left, word);
-    suggestWords(root->right, word);
+    return matrix[len1][len2];
 }
 
 // Free memory allocated for the BST
