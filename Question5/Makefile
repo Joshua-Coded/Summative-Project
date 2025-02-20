@@ -1,33 +1,22 @@
-# Define compiler and flags
 CC = gcc
 CFLAGS = -Wall -g -Iinclude
-LDLIBS = 
-
-# Define source files, object files, and executable
 SRC_DIR = src
-INCLUDE_DIR = include
-SRC_FILES = $(SRC_DIR)/huffman_coding.c main.c
-OBJS = $(SRC_FILES:.c=.o)
-EXEC = huffman_coding
+INC_DIR = include
+OBJ_DIR = obj
 
-# Default target
-all: $(EXEC)
+# Create object directory if it doesn't exist
+$(shell mkdir -p $(OBJ_DIR))
 
-# Linking objects to create executable
-$(EXEC): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDLIBS)
+all: huffman
 
-# Compile source files into object files
-$(SRC_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+huffman: $(OBJ_DIR)/main.o $(OBJ_DIR)/huffman.o
+	$(CC) $(CFLAGS) -o huffman $(OBJ_DIR)/main.o $(OBJ_DIR)/huffman.o
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/main.o: main.c $(INC_DIR)/huffman.h
+	$(CC) $(CFLAGS) -c main.c -o $(OBJ_DIR)/main.o
 
-# Clean up object files and executable
+$(OBJ_DIR)/huffman.o: $(SRC_DIR)/huffman.c $(INC_DIR)/huffman.h
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/huffman.c -o $(OBJ_DIR)/huffman.o
+
 clean:
-	rm -f $(SRC_DIR)/*.o *.o $(EXEC)
-
-# Run the program
-run: all
-	./$(EXEC)
+	rm -rf $(OBJ_DIR) huffman
