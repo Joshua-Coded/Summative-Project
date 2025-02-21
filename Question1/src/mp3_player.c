@@ -13,7 +13,6 @@ pthread_t playbackThread;
 void* playAudioThread(void* arg) {
     const SongNode* current = (const SongNode*)arg;
     
-    // Initialize SDL
     if (SDL_Init(SDL_INIT_AUDIO) != 0) {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
         return NULL;
@@ -30,41 +29,43 @@ void* playAudioThread(void* arg) {
     }
 
     currentDeviceId = SDL_OpenAudioDevice(NULL, 0, &wavSpec, NULL, 0);
-    SDL_QueueAudio(currentDeviceId, wavBuffer, wavLength);
-    SDL_PauseAudioDevice(currentDeviceId, 0);  // Start playing immediately
+    if (currentDeviceId == 0) {
+        printf("Failed to open audio device: %s\n", SDL_GetError());
+        SDL_FreeWAV(wavBuffer);
+        SDL_Quit();
+        return NULL;
+    }
 
-    // Wait until playback finishes or is interrupted
+    SDL_QueueAudio(currentDeviceId, wavBuffer, wavLength);
+    SDL_PauseAudioDevice(currentDeviceId, 0);  // Start playing
+
     while (!shouldStop && SDL_GetQueuedAudioSize(currentDeviceId) > 0) {
         if (isPaused) {
             SDL_PauseAudioDevice(currentDeviceId, 1);  // Pause
         } else {
             SDL_PauseAudioDevice(currentDeviceId, 0);  // Resume
         }
-        SDL_Delay(100);
+        SDL_Delay(100);  // Poll every 100ms
     }
 
-    // Clean up resources
+    // Clean up
     SDL_CloseAudioDevice(currentDeviceId);
     SDL_FreeWAV(wavBuffer);
     SDL_Quit();
     
-    if (!shouldStop) {
-        // Playback finished naturally
-        isPlaying = false;
-    }
-    
+    isPlaying = false;  // Reset flag when done
     return NULL;
 }
 
-// Initialize an empty playlist
+// Initialize playlist
 void initializePlaylist(SongNode** head) {
     *head = NULL;
 }
 
-// Add a song to the playlist
+// Add song to playlist
 void addSong(SongNode** head, const char* songName) {
     SongNode* newNode = (SongNode*)malloc(sizeof(SongNode));
-    if (newNode == NULL) {
+    if (!newNode) {
         printf("Memory allocation failed.\n");
         return;
     }
@@ -74,25 +75,22 @@ void addSong(SongNode** head, const char* songName) {
     newNode->next = NULL;
     
     if (*head == NULL) {
-        // First song in the playlist
         newNode->prev = NULL;
         *head = newNode;
         return;
     }
     
-    // Add to the end of the playlist
     SongNode* current = *head;
-    while (current->next != NULL) {
+    while (current->next) {
         current = current->next;
     }
-    
     current->next = newNode;
     newNode->prev = current;
 }
 
-// Display all songs in the playlist
+// Display playlist
 void displayPlaylist(const SongNode* head) {
-    if (head == NULL) {
+    if (!head) {
         printf("Playlist is empty.\n");
         return;
     }
@@ -100,65 +98,53 @@ void displayPlaylist(const SongNode* head) {
     printf("\n===== Playlist =====\n");
     int songNumber = 1;
     const SongNode* current = head;
-    
-    while (current != NULL) {
+    while (current) {
         printf("%d. %s\n", songNumber++, current->songName);
         current = current->next;
     }
     printf("====================\n");
 }
 
-// Stop the current playback
+// Stop playback
 void stopPlayback() {
     if (isPlaying) {
         shouldStop = true;
-        
-        // Stop the device immediately
         if (currentDeviceId > 0) {
-            SDL_ClearQueuedAudio(currentDeviceId);
-            SDL_PauseAudioDevice(currentDeviceId, 1);
+            SDL_ClearQueuedAudio(currentDeviceId);      // Clear audio queue
+            SDL_PauseAudioDevice(currentDeviceId, 1);   // Pause device
+            SDL_CloseAudioDevice(currentDeviceId);      // Close device immediately
+            currentDeviceId = 0;
         }
-        
-        // Wait for the thread to finish
-        pthread_join(playbackThread, NULL);
-        
-        // Reset flags
+        pthread_join(playbackThread, NULL);  // Wait for thread to finish
         shouldStop = false;
         isPlaying = false;
         isPaused = false;
-        currentDeviceId = 0;
     }
 }
 
-// Function to play a song using SDL2 in a separate thread
+// Play a song
 void playSong(const SongNode* current) {
-    if (current == NULL) {
+    if (!current) {
         printf("No song to play.\n");
         return;
     }
 
-    // Stop any currently playing song
-    stopPlayback();
+    stopPlayback();  // Stop any ongoing playback
     
     printf("Now playing: %s\n", current->songName);
-    
-    // Reset flags
     isPlaying = true;
     isPaused = false;
     shouldStop = false;
     
-    // Create thread for audio playback
     if (pthread_create(&playbackThread, NULL, playAudioThread, (void*)current) != 0) {
         printf("Failed to create playback thread.\n");
         isPlaying = false;
         return;
     }
-    
-    // Make thread detached so resources are freed automatically
-    pthread_detach(playbackThread);
+    // Note: Thread is NOT detached, so we can join it in stopPlayback()
 }
 
-// Navigate through the playlist
+// Navigate playlist
 void navigatePlaylist(SongNode** current) {
     char command[10];
     printf("\nControls: n: next, p: previous, s: stop, q: quit, x: pause/resume\n");
@@ -167,39 +153,36 @@ void navigatePlaylist(SongNode** current) {
         printf("\nEnter command: ");
         scanf("%s", command);
 
-        if (strcmp(command, "n") == 0) { // Next song
-            if ((*current)->next != NULL) {
+        if (strcmp(command, "n") == 0) {
+            if ((*current)->next) {
                 *current = (*current)->next;
                 playSong(*current);
             } else {
                 printf("End of playlist reached.\n");
             }
-        } else if (strcmp(command, "p") == 0) { // Previous song
-            if ((*current)->prev != NULL) {
+        } else if (strcmp(command, "p") == 0) {
+            if ((*current)->prev) {
                 *current = (*current)->prev;
                 playSong(*current);
             } else {
                 printf("Beginning of playlist reached.\n");
             }
-        } else if (strcmp(command, "s") == 0) { // Stop playback
+        } else if (strcmp(command, "s") == 0) {
             if (isPlaying) {
                 printf("Stopping playback...\n");
                 stopPlayback();
+                printf("Stopped.\n");
             } else {
                 printf("Playback already stopped.\n");
             }
-        } else if (strcmp(command, "x") == 0) { // Pause/Resume
+        } else if (strcmp(command, "x") == 0) {
             if (isPlaying) {
-                isPaused = !isPaused; // Toggle pause state
-                if (isPaused) {
-                    printf("Playback paused.\n");
-                } else {
-                    printf("Playback resumed.\n");
-                }
+                isPaused = !isPaused;
+                printf(isPaused ? "Playback paused.\n" : "Playback resumed.\n");
             } else {
                 printf("No song is currently playing.\n");
             }
-        } else if (strcmp(command, "q") == 0) { // Quit the program
+        } else if (strcmp(command, "q") == 0) {
             if (isPlaying) {
                 printf("Stopping playback before quitting...\n");
                 stopPlayback();
@@ -207,7 +190,7 @@ void navigatePlaylist(SongNode** current) {
             printf("Exiting MP3 player.\n");
             break;
         } else {
-            printf("Invalid command. Please try again.\n");
+            printf("Invalid command.\n");
         }
     }
 }

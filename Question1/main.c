@@ -5,26 +5,21 @@ int main(int argc, char* argv[]) {
     SongNode* playlist = NULL;
     SongNode* currentSong = NULL;
     
-    // Initialize the playlist
     initializePlaylist(&playlist);
     
-    // Load songs from the songs directory
-    DIR* dir;
-    struct dirent* entry;
-    dir = opendir("songs");
-    
-    if (dir == NULL) {
+    DIR* dir = opendir("songs");
+    if (!dir) {
         printf("Error: Could not open songs directory.\n");
         return 1;
     }
     
     int songCount = 0;
     char songPath[300];
+    struct dirent* entry;
     
     printf("Loading songs...\n");
     while ((entry = readdir(dir)) != NULL) {
-        // Only add WAV files
-        if (strstr(entry->d_name, ".wav") != NULL) {
+        if (strstr(entry->d_name, ".wav")) {
             sprintf(songPath, "songs/%s", entry->d_name);
             addSong(&playlist, songPath);
             songCount++;
@@ -38,20 +33,14 @@ int main(int argc, char* argv[]) {
     }
     
     printf("Loaded %d songs.\n", songCount);
-    
-    // Display the playlist
     displayPlaylist(playlist);
     
-    // Start with the first song
     currentSong = playlist;
-    
-    // Play the first song and navigate through playlist
     playSong(currentSong);
-    navigatePlaylist(&currentSong);
+    navigatePlaylist(&currentSong);  // Fixed typo: '¤tSong' → '&currentSong'
     
-    // Free memory used by playlist before exiting
     SongNode* temp;
-    while (playlist != NULL) {
+    while (playlist) {
         temp = playlist;
         playlist = playlist->next;
         free(temp);
