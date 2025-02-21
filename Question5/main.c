@@ -1,5 +1,5 @@
-#include <stdio.h>  // Added for printf
-#include <string.h> // Added for strcmp
+#include <stdio.h>
+#include <string.h>
 #include "huffman.h"
 
 int main(int argc, char* argv[]) {
@@ -7,7 +7,7 @@ int main(int argc, char* argv[]) {
         printf("Usage: %s <compress/decompress> <input_file>\n", argv[0]);
         return 1;
     }
-
+    
     if (strcmp(argv[1], "compress") == 0) {
         if (compressFile(argv[2]) == 0) {
             return 0;
@@ -19,6 +19,6 @@ int main(int argc, char* argv[]) {
     } else {
         printf("Invalid command. Use 'compress' or 'decompress'\n");
     }
-
+    
     return 1;
 }
